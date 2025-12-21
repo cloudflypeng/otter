@@ -120,30 +120,30 @@ export const status = async () => {
 
         <Box marginTop={1} flexDirection="column">
           <Box>
-            <Text width={12}>PID:</Text>
+            <Box width={12}><Text>PID:</Text></Box>
             <Text color="blue">{coreStatus.pid}</Text>
           </Box>
           <Box>
-            <Text width={12}>Version:</Text>
+            <Box width={12}><Text>Version:</Text></Box>
             <Text color="yellow">{coreStatus.version}</Text>
           </Box>
           <Box>
-            <Text width={12}>Memory:</Text>
+            <Box width={12}><Text>Memory:</Text></Box>
             <Text color="cyan">{formatSize(coreStatus.memory || 0)}</Text>
           </Box>
         </Box>
 
         <Box marginTop={1} borderStyle="single" borderColor="gray" flexDirection="column">
           <Box>
-            <Text width={12}>Active Sub:</Text>
+            <Box width={12}><Text>Active Sub:</Text></Box>
             <Text color="magenta">{subInfo?.active || 'None'}</Text>
           </Box>
           <Box>
-            <Text width={12}>Total Subs:</Text>
+            <Box width={12}><Text>Total Subs:</Text></Box>
             <Text>{subInfo?.count || 0}</Text>
           </Box>
           <Box>
-            <Text width={12}>Proxies:</Text>
+            <Box width={12}><Text>Proxies:</Text></Box>
             <Text>{proxyCount}</Text>
           </Box>
         </Box>

@@ -166,7 +166,7 @@ const TuiApp = () => {
     if (input === 'm') {
       const modes = ['Rule', 'Global', 'Direct'];
       const currentModeIndex = modes.findIndex(m => m.toLowerCase() === mode.toLowerCase());
-      const nextMode = modes[(currentModeIndex + 1) % modes.length];
+      const nextMode = modes[(currentModeIndex + 1) % modes.length] || 'Rule';
       setMessage(`Switching mode to ${nextMode}...`);
       try {
         await ClashAPI.updateConfig({ mode: nextMode });
