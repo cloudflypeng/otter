@@ -9,6 +9,9 @@
   "bin": {
     "ot": "index.ts"
   },
+  "scripts": {
+    "postinstall": "chmod +x bin/mihomo"
+  },
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
