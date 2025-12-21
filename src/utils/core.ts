@@ -37,6 +37,22 @@ export class CoreManager {
     // Ensure executable permission
     await fs.chmod(BIN_PATH, 0o755);
 
+    // Check for quarantine on macOS
+    if (process.platform === 'darwin') {
+      try {
+        await execAsync(`xattr -p com.apple.quarantine "${BIN_PATH}"`);
+        // If command succeeds, the attribute exists
+        console.error('\n\x1b[31mError: The Mihomo binary is quarantined by macOS.\x1b[0m');
+        console.error('You need to run the following command to allow it to run:');
+        console.error(`\n  \x1b[33msudo xattr -d com.apple.quarantine "${BIN_PATH}"\x1b[0m\n`);
+        throw new Error('Binary is quarantined');
+      } catch (e: any) {
+        // If command fails (exit code 1), the attribute does not exist, which is good.
+        // If it's another error, we ignore it for now.
+        if (e.message === 'Binary is quarantined') throw e;
+      }
+    }
+
     // Check config
     if (!await fs.pathExists(CONFIG_FILE)) {
       console.log(`Config file not found. Creating default at ${CONFIG_FILE}...`);

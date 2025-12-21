@@ -15,7 +15,15 @@ Otter (ot) 是一个基于 [Mihomo](https://github.com/MetaCubeX/mihomo)
 
 ## 📦 安装
 
+### 通过 npm (推荐)
+
 确保你已经安装了 [Bun](https://bun.sh/)。
+
+```bash
+bun add -g @meanc/otter
+```
+
+### 从源码安装
 
 ```bash
 # 克隆仓库

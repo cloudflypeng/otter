@@ -6,6 +6,7 @@ import * as proxy from './src/commands/proxy';
 import * as system from './src/commands/system';
 import * as ui from './src/commands/ui';
 import * as subscribe from './src/commands/subscribe';
+import { BIN_PATH } from './src/utils/paths';
 
 const cli = cac('ot');
 
@@ -69,6 +70,10 @@ cli.command('mode [mode]', 'Get or set proxy mode (Rule/Global/Direct)').action(
 
 // UI
 cli.command('ui', 'Launch TUI').action(ui.ui);
+
+cli.command('path', 'Show binary path').action(() => {
+  console.log(BIN_PATH);
+});
 
 cli.command('version', 'Show version').action(async () => {
   const packageJson = JSON.parse(await Bun.file('./package.json').text());

@@ -1,5 +1,8 @@
 {
-  "name": "otter",
+  "name": "@meanc/otter",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "以水獭为名的clash tui",
   "module": "index.ts",
   "version": "0.0.1",
