@@ -24,6 +24,27 @@ const formatSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+const ProgressBar = ({ percent = 0, width = 20, color = 'green' }: { percent?: number, width?: number, color?: string }) => {
+  const safePercent = Math.min(1, Math.max(0, percent));
+  const completed = Math.floor(safePercent * width);
+  const remaining = width - completed;
+  return (
+    <Text>
+      <Text color={color}>{'█'.repeat(completed)}</Text>
+      <Text color="gray">{'░'.repeat(remaining)}</Text>
+    </Text>
+  );
+};
+
+const getSpeedPercent = (bytes: number) => {
+  if (bytes <= 0) return 0;
+  const MAX_SPEED = 10 * 1024 * 1024; // 10MB/s
+  // Linear scale
+  const p = bytes / MAX_SPEED;
+  return Math.min(1, p);
+};
+
+
 export const start = async () => {
   try {
     await CoreManager.start();
@@ -112,57 +133,65 @@ export const status = async () => {
 
     if (!coreStatus.running) {
       return (
-        <Box borderStyle="round" borderColor="red" padding={1}>
-          <Text color="red">Otter Core is stopped.</Text>
+        <Box padding={1}>
+          <Text color="red">● Otter Core is stopped.</Text>
         </Box>
       );
     }
 
     return (
-      <Box flexDirection="column" borderStyle="round" borderColor="green" padding={1} width={50}>
-        <Box justifyContent="space-between">
-          <Text color="green" bold>Otter Core is running</Text>
-          <Text color="gray">Press 'q' to exit</Text>
+      <Box flexDirection="column" padding={1}>
+        <Box marginBottom={1}>
+          <Text color="cyan" bold>● Otter Status</Text>
+          <Text color="gray">  (Press 'q' to exit)</Text>
         </Box>
 
-        <Box marginTop={1} flexDirection="column">
-          <Box>
-            <Box width={12}><Text>PID:</Text></Box>
-            <Text color="blue">{coreStatus.pid}</Text>
+        {/* System Info */}
+        <Box flexDirection="column" marginBottom={1}>
+          <Text color="blue" bold>System</Text>
+          <Box marginLeft={2}>
+            <Box width={12}><Text>PID</Text></Box>
+            <Text color="gray">{coreStatus.pid}</Text>
           </Box>
-          <Box>
-            <Box width={12}><Text>Version:</Text></Box>
-            <Text color="yellow">{coreStatus.version}</Text>
+          <Box marginLeft={2}>
+            <Box width={12}><Text>Version</Text></Box>
+            <Text color="gray">{coreStatus.version}</Text>
           </Box>
-          <Box>
-            <Box width={12}><Text>Memory:</Text></Box>
-            <Text color="cyan">{formatSize(coreStatus.memory || 0)}</Text>
-          </Box>
-        </Box>
-
-        <Box marginTop={1} borderStyle="single" borderColor="gray" flexDirection="column">
-          <Box>
-            <Box width={12}><Text>Active Sub:</Text></Box>
-            <Text color="magenta">{subInfo?.active || 'None'}</Text>
-          </Box>
-          <Box>
-            <Box width={12}><Text>Total Subs:</Text></Box>
-            <Text>{subInfo?.count || 0}</Text>
-          </Box>
-          <Box>
-            <Box width={12}><Text>Proxies:</Text></Box>
-            <Text>{proxyCount}</Text>
+          <Box marginLeft={2}>
+            <Box width={12}><Text>Memory</Text></Box>
+            <Text color="gray">{formatSize(coreStatus.memory || 0)}</Text>
           </Box>
         </Box>
 
-        <Box marginTop={1} flexDirection="row" justifyContent="space-around">
-          <Box flexDirection="column" alignItems="center">
-            <Text>Upload</Text>
-            <Text color="green">↑ {formatSpeed(traffic.up)}</Text>
+        {/* Configuration */}
+        <Box flexDirection="column" marginBottom={1}>
+          <Text color="magenta" bold>Configuration</Text>
+          <Box marginLeft={2}>
+            <Box width={12}><Text>Profile</Text></Box>
+            <Text color="gray">{subInfo?.active || 'Default'}</Text>
           </Box>
-          <Box flexDirection="column" alignItems="center">
-            <Text>Download</Text>
-            <Text color="green">↓ {formatSpeed(traffic.down)}</Text>
+          <Box marginLeft={2}>
+            <Box width={12}><Text>Proxies</Text></Box>
+            <Text color="gray">{proxyCount} nodes</Text>
+          </Box>
+        </Box>
+
+        {/* Network Traffic */}
+        <Box flexDirection="column">
+          <Text color="green" bold>Network Traffic</Text>
+
+          <Box marginLeft={2} marginTop={1} flexDirection="column">
+            <Box>
+              <Box width={12}><Text>Upload</Text></Box>
+              <Box width={14}><Text color="yellow">{formatSpeed(traffic.up)}</Text></Box>
+              <ProgressBar percent={getSpeedPercent(traffic.up)} width={10} color="yellow" />
+            </Box>
+
+            <Box>
+              <Box width={12}><Text>Download</Text></Box>
+              <Box width={14}><Text color="green">{formatSpeed(traffic.down)}</Text></Box>
+              <ProgressBar percent={getSpeedPercent(traffic.down)} width={10} color="green" />
+            </Box>
           </Box>
         </Box>
       </Box>

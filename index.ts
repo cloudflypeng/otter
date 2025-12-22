@@ -6,6 +6,7 @@ import * as proxy from './src/commands/proxy';
 import * as system from './src/commands/system';
 import * as ui from './src/commands/ui';
 import * as subscribe from './src/commands/subscribe';
+import * as menu from './src/commands/menu';
 import { BIN_PATH } from './src/utils/paths';
 
 const cli = cac('ot');
@@ -138,4 +139,30 @@ cli.help((sections) => {
   return newSections;
 });
 
-cli.parse();
+const run = async () => {
+  // If no args provided, show menu
+  if (process.argv.length === 2) {
+    const action = await menu.show();
+    switch (action) {
+      case 'start':
+        await core.start();
+        break;
+      case 'stop':
+        await core.stop();
+        break;
+      case 'status':
+        await core.status();
+        break;
+      case 'ui':
+        await ui.ui();
+        break;
+      case 'quit':
+        process.exit(0);
+        break;
+    }
+  } else {
+    cli.parse();
+  }
+};
+
+run();
