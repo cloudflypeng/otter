@@ -6,6 +6,7 @@ import { SubscriptionManager } from '../utils/subscription';
 import { LOG_FILE } from '../utils/paths';
 import { spawn } from 'child_process';
 import fs from 'fs-extra';
+import * as system from './system';
 
 const formatSpeed = (bytes: number) => {
   if (bytes === 0) return '0 B/s';
@@ -26,6 +27,7 @@ const formatSize = (bytes: number) => {
 export const start = async () => {
   try {
     await CoreManager.start();
+    await system.on();
   } catch (error: any) {
     console.error('Error starting core:', error.message);
   }
@@ -33,6 +35,11 @@ export const start = async () => {
 
 export const stop = async () => {
   try {
+    const isProxyEnabled = await system.getSystemProxyStatus();
+    if (isProxyEnabled) {
+      console.log('System proxy is enabled. Disabling it...');
+      await system.off();
+    }
     await CoreManager.stop();
   } catch (error: any) {
     console.error('Error stopping core:', error.message);
