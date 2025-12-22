@@ -3,6 +3,11 @@
 Otter (ot) 是一个基于 [Mihomo](https://github.com/MetaCubeX/mihomo)
 核心的极简主义 Clash TUI
 客户端。它专为速度和可组合性而设计，提供流畅的命令行体验和交互式界面。
+<img width="1036" height="532" alt="image" src="https://github.com/user-attachments/assets/3d2969ed-41ee-4bd3-b37a-97173bea2d50" />
+
+<img width="658" height="426" alt="image" src="https://github.com/user-attachments/assets/e82dfb1a-3548-45b4-be99-6f4a3bf1ea43" />
+
+
 
 ## ✨ 特性
 
