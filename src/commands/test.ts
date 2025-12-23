@@ -57,7 +57,7 @@ export const test = async (target: string = 'Proxy') => {
     const batch = nodes.slice(i, i + batchSize);
     await Promise.all(batch.map(async (node) => {
       try {
-        const res = await ClashAPI.getDelay(node);
+        const res = await ClashAPI.getDelay(node) as { delay: number };
         printResult(node, res.delay);
       } catch (e) {
         printResult(node, 'Timeout');

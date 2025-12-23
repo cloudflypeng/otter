@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { render, Text, Box, useApp, useInput } from 'ink';
+import { render, Text, Box, useApp, useInput, useStdout } from 'ink';
 import { CoreManager } from '../utils/core';
 import { ClashAPI } from '../utils/api';
 import { SubscriptionManager } from '../utils/subscription';
-import { LOG_FILE } from '../utils/paths';
+import { LOG_FILE, SMART_LOG_FILE, SMART_PID_FILE } from '../utils/paths';
 import { spawn } from 'child_process';
 import fs from 'fs-extra';
 import * as system from './system';
+import { TrafficGraph } from '../components/TrafficGraph';
 
 const formatSpeed = (bytes: number) => {
   if (bytes === 0) return '0 B/s';
@@ -44,10 +45,57 @@ const getSpeedPercent = (bytes: number) => {
   return Math.min(1, p);
 };
 
+const startSmartPilot = async () => {
+  // Check if already running
+  if (await fs.pathExists(SMART_PID_FILE)) {
+    try {
+      const pid = parseInt(await fs.readFile(SMART_PID_FILE, 'utf-8'), 10);
+      // Check if process exists
+      process.kill(pid, 0);
+      console.log('Smart Pilot is already running.');
+      return;
+    } catch (e) {
+      // Process doesn't exist, remove stale PID file
+      await fs.remove(SMART_PID_FILE);
+    }
+  }
+
+  await fs.ensureFile(SMART_LOG_FILE);
+  const logFd = await fs.open(SMART_LOG_FILE, 'a');
+
+  const child = spawn(process.argv[0] || 'bun', [process.argv[1] || '', 'smart'], {
+    detached: true,
+    stdio: ['ignore', logFd, logFd]
+  }) as any;
+
+  if (child.pid) {
+    await fs.writeFile(SMART_PID_FILE, child.pid.toString());
+    child.unref();
+    console.log(`Smart Pilot started with PID ${child.pid}`);
+  } else {
+    console.error('Failed to start Smart Pilot');
+  }
+};
+
+const stopSmartPilot = async () => {
+  if (await fs.pathExists(SMART_PID_FILE)) {
+    const pid = parseInt(await fs.readFile(SMART_PID_FILE, 'utf-8'), 10);
+    if (!isNaN(pid)) {
+      try {
+        process.kill(pid);
+        console.log('Smart Pilot stopped.');
+      } catch (e) {
+        // Process might be already gone
+      }
+    }
+    await fs.remove(SMART_PID_FILE);
+  }
+};
 
 export const start = async () => {
   try {
     await CoreManager.start();
+    await startSmartPilot();
     await system.on();
   } catch (error: any) {
     console.error('Error starting core:', error.message);
@@ -61,6 +109,7 @@ export const stop = async () => {
       console.log('System proxy is enabled. Disabling it...');
       await system.off();
     }
+    await stopSmartPilot();
     await CoreManager.stop();
   } catch (error: any) {
     console.error('Error stopping core:', error.message);
@@ -70,8 +119,11 @@ export const stop = async () => {
 export const status = async () => {
   const StatusApp = () => {
     const { exit } = useApp();
+    const { stdout } = useStdout();
+    const [width, setWidth] = useState(stdout.columns);
     const [coreStatus, setCoreStatus] = useState<any>(null);
     const [traffic, setTraffic] = useState({ up: 0, down: 0 });
+    const [history, setHistory] = useState<{ up: number[], down: number[] }>({ up: [], down: [] });
     const [subInfo, setSubInfo] = useState<{ active: string | null, count: number } | null>(null);
     const [proxyCount, setProxyCount] = useState<number>(0);
 
@@ -80,6 +132,18 @@ export const status = async () => {
         exit();
       }
     });
+
+    useEffect(() => {
+      const onResize = () => setWidth(stdout.columns);
+      stdout.on('resize', onResize);
+      return () => {
+        stdout.off('resize', onResize);
+      };
+    }, [stdout]);
+
+    // Calculate dynamic graph width (terminal width - padding)
+    // Padding: marginLeft(2) + padding(1) + border(2) approx 6-8 chars
+    const graphWidth = Math.max(20, Math.min(width - 8, 120));
 
     useEffect(() => {
       let ws: WebSocket | null = null;
@@ -110,6 +174,12 @@ export const status = async () => {
             ws.onmessage = (event) => {
               const data = JSON.parse(event.data as string);
               setTraffic(data);
+              setHistory(prev => {
+                // Keep enough history for wide screens
+                const newUp = [...prev.up, data.up].slice(-120);
+                const newDown = [...prev.down, data.down].slice(-120);
+                return { up: newUp, down: newDown };
+              });
             };
           } catch (e) { }
         }
@@ -181,16 +251,22 @@ export const status = async () => {
           <Text color="green" bold>Network Traffic</Text>
 
           <Box marginLeft={2} marginTop={1} flexDirection="column">
-            <Box>
-              <Box width={12}><Text>Upload</Text></Box>
-              <Box width={14}><Text color="yellow">{formatSpeed(traffic.up)}</Text></Box>
-              <ProgressBar percent={getSpeedPercent(traffic.up)} width={10} color="yellow" />
+            {/* Upload Section */}
+            <Box flexDirection="column" marginBottom={1}>
+              <Box flexDirection="row" width={graphWidth} justifyContent="space-between" marginBottom={0}>
+                <Text>Upload</Text>
+                <Text color="yellow">{formatSpeed(traffic.up)}</Text>
+              </Box>
+              <TrafficGraph data={history.up} width={graphWidth} height={4} color="yellow" />
             </Box>
 
-            <Box>
-              <Box width={12}><Text>Download</Text></Box>
-              <Box width={14}><Text color="green">{formatSpeed(traffic.down)}</Text></Box>
-              <ProgressBar percent={getSpeedPercent(traffic.down)} width={10} color="green" />
+            {/* Download Section */}
+            <Box flexDirection="column">
+              <Box flexDirection="row" width={graphWidth} justifyContent="space-between" marginBottom={0}>
+                <Text>Download</Text>
+                <Text color="green">{formatSpeed(traffic.down)}</Text>
+              </Box>
+              <TrafficGraph data={history.down} width={graphWidth} height={4} color="green" />
             </Box>
           </Box>
         </Box>

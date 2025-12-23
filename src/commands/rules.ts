@@ -40,7 +40,7 @@ export const match = async (urlOrHost: string) => {
   try {
     const res = await fetch(`${baseUrl}/rules`, { headers });
     if (!res.ok) throw new Error(res.statusText);
-    const data = await res.json();
+    const data = await res.json() as { rules: Rule[] };
     rules = data?.rules || [];
   } catch (e: any) {
     console.error(chalk.red(`Failed to fetch rules: ${e.message}`));
