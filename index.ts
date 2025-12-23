@@ -9,6 +9,7 @@ import * as subscribe from './src/commands/subscribe';
 import * as menu from './src/commands/menu';
 import * as test from './src/commands/test';
 import * as connections from './src/commands/connections';
+import * as rules from './src/commands/rules';
 import { BIN_PATH } from './src/utils/paths';
 
 const cli = cac('ot');
@@ -19,6 +20,7 @@ cli.command('down', 'Stop Clash core').alias('stop').action(core.stop);
 cli.command('status', 'Check status').action(core.status);
 cli.command('log', 'Show logs').action(core.log);
 cli.command('conns', 'Manage connections').alias('connections').action(connections.show);
+cli.command('match <url>', 'Check which rule matches the URL').action(rules.match);
 
 // Test
 cli.command('test [group]', 'Speed test proxies').action(test.test);
@@ -106,7 +108,7 @@ cli.help((sections) => {
       groups['Core Commands'].push(cmd);
     } else if (name === 'sub') {
       groups['Subscription Commands'].push(cmd);
-    } else if (['ls', 'use', 'test', 'best'].includes(name)) {
+    } else if (['ls', 'use', 'test', 'best', 'match'].includes(name)) {
       groups['Proxy Commands'].push(cmd);
     } else if (['on', 'off', 'shell', 'mode'].includes(name)) {
       groups['System Commands'].push(cmd);
