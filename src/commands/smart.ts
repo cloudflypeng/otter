@@ -72,7 +72,7 @@ export const start = async () => {
       }
 
       if (isHealthy) {
-        await sleep(30000); // Check every 30s if healthy
+        await sleep(10000); // Check every 10s if healthy
         continue;
       }
 
