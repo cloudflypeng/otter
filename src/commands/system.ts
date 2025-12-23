@@ -134,7 +134,7 @@ export const mode = async (modeName?: string) => {
     return;
   }
 
-  const validModes = ['global', 'rule', 'direct'];
+  const validModes = ['global', 'rule', 'direct', 'script'];
   const m = modeName.toLowerCase();
   if (!validModes.includes(m)) {
     console.error(chalk.red(`Invalid mode: ${modeName}. Valid modes: ${validModes.join(', ')}`));

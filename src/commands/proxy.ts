@@ -147,7 +147,7 @@ export const test = async () => {
 };
 
 export const best = async () => {
-  console.log(chalk.blue('Testing all nodes to find the best one...'));
+  console.log(chalk.blue('Testing Proxy group to find the best one...'));
 
   const data = await ClashAPI.getProxies();
   if (!data || !data.proxies) {
@@ -156,17 +156,11 @@ export const best = async () => {
   }
 
   const proxies = data.proxies;
-  const groups = Object.values(proxies).filter((p: any) => p.type === 'Selector');
-
-  if (groups.length === 0) {
-    console.error(chalk.red('No selector groups found in config.'));
-    return;
-  }
-
-  const mainGroup: any = groups.find((g: any) => ['Proxy', 'GLOBAL'].includes(g.name)) || groups[0];
+  // Explicitly look for 'Proxy' group
+  const mainGroup: any = proxies['Proxy'];
 
   if (!mainGroup) {
-    console.error(chalk.red('Could not determine main proxy group.'));
+    console.error(chalk.red("Group 'Proxy' not found."));
     return;
   }
 

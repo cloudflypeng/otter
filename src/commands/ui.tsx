@@ -178,6 +178,49 @@ const TuiApp = () => {
       return;
     }
 
+    if (input === 'b') {
+      if (groups.length === 0) return;
+      const currentGroup = groups[selectedGroupIndex];
+      setMessage(`Testing ${currentGroup.name} for best node...`);
+
+      // Run test in background
+      (async () => {
+        try {
+          const candidates: string[] = currentGroup.all;
+          let bestNode = '';
+          let minDelay = Infinity;
+
+          // Test all nodes
+          const results = await Promise.all(candidates.map(async (node) => {
+            try {
+              const res = await ClashAPI.getDelay(node);
+              return { node, delay: res.delay };
+            } catch {
+              return { node, delay: Infinity };
+            }
+          }));
+
+          results.forEach(r => {
+            if (r.delay < minDelay && r.delay > 0) {
+              minDelay = r.delay;
+              bestNode = r.node;
+            }
+          });
+
+          if (bestNode) {
+            await ClashAPI.switchProxy(currentGroup.name, bestNode);
+            setMessage(`Auto-selected: ${bestNode} (${minDelay}ms)`);
+            await refreshProxies();
+          } else {
+            setMessage('No reachable nodes found.');
+          }
+        } catch (e: any) {
+          setMessage(`Error: ${e.message}`);
+        }
+      })();
+      return;
+    }
+
     if (groups.length === 0) return;
 
     const currentGroup = groups[selectedGroupIndex];
@@ -310,7 +353,7 @@ const TuiApp = () => {
 
       {/* Footer / Status Bar */}
       <Box borderStyle="round" borderColor="gray" paddingX={1}>
-        <Text>{message || 'Arrows: Navigate | Enter: Select | Tab: Switch Panel | [s]: SysProxy | [m]: Mode | q: Quit'}</Text>
+        <Text>{message || 'Arrows: Navigate | Enter: Select | Tab: Switch Panel | [s]: SysProxy | [m]: Mode | [b]: Best | q: Quit'}</Text>
       </Box>
     </Box>
   );

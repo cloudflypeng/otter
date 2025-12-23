@@ -7,6 +7,8 @@ import * as system from './src/commands/system';
 import * as ui from './src/commands/ui';
 import * as subscribe from './src/commands/subscribe';
 import * as menu from './src/commands/menu';
+import * as test from './src/commands/test';
+import * as connections from './src/commands/connections';
 import { BIN_PATH } from './src/utils/paths';
 
 const cli = cac('ot');
@@ -16,6 +18,10 @@ cli.command('up', 'Start Clash core').alias('start').action(core.start);
 cli.command('down', 'Stop Clash core').alias('stop').action(core.stop);
 cli.command('status', 'Check status').action(core.status);
 cli.command('log', 'Show logs').action(core.log);
+cli.command('conns', 'Manage connections').alias('connections').action(connections.show);
+
+// Test
+cli.command('test [group]', 'Speed test proxies').action(test.test);
 
 // Subscribe
 cli.command('sub <cmd> [arg1] [arg2]', 'Manage subscriptions')
@@ -60,7 +66,7 @@ cli.command('use [node]', 'Switch node')
   .option('-g, --global <index>', 'Select by global index')
   .option('-p, --proxy <index>', 'Select by proxy index')
   .action(proxy.use);
-cli.command('test', 'Test latency').action(proxy.test);
+// cli.command('test', 'Test latency').action(proxy.test); // Replaced by src/commands/test.ts
 cli.command('best', 'Select best node').action(proxy.best);
 
 // System
@@ -96,7 +102,7 @@ cli.help((sections) => {
 
   cli.commands.forEach(cmd => {
     const name = cmd.name.split(' ')[0] || '';
-    if (['up', 'down', 'status', 'log', 'start', 'stop'].includes(name)) {
+    if (['up', 'down', 'status', 'log', 'start', 'stop', 'conns'].includes(name)) {
       groups['Core Commands'].push(cmd);
     } else if (name === 'sub') {
       groups['Subscription Commands'].push(cmd);

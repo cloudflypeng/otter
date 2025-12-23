@@ -100,6 +100,38 @@ export class ClashAPI {
     if (!res.ok) throw new Error(`Failed to update config: ${res.statusText}`);
   }
 
+  static async getConnections(): Promise<any> {
+    const baseUrl = await this.getBaseUrl();
+    const headers = await this.getHeaders();
+    try {
+      const res = await fetch(`${baseUrl}/connections`, { headers });
+      if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static async closeConnection(id: string) {
+    const baseUrl = await this.getBaseUrl();
+    const headers = await this.getHeaders();
+    const res = await fetch(`${baseUrl}/connections/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    if (!res.ok) throw new Error(`Failed to close connection: ${res.statusText}`);
+  }
+
+  static async closeAllConnections() {
+    const baseUrl = await this.getBaseUrl();
+    const headers = await this.getHeaders();
+    const res = await fetch(`${baseUrl}/connections`, {
+      method: 'DELETE',
+      headers
+    });
+    if (!res.ok) throw new Error(`Failed to close all connections: ${res.statusText}`);
+  }
+
   static async getTrafficUrl(): Promise<string> {
     const baseUrl = await this.getBaseUrl();
     return baseUrl.replace('http://', 'ws://') + '/traffic';
