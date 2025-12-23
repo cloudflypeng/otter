@@ -16,7 +16,7 @@ import { BIN_PATH } from './src/utils/paths';
 const cli = cac('ot');
 
 // Core
-cli.command('up', 'Start Clash core').alias('start').action(core.start);
+cli.command('up', 'Start Clash core').alias('start').option('--smart', 'Enable smart mode').action(core.start);
 cli.command('down', 'Stop Clash core').alias('stop').action(core.stop);
 cli.command('status', 'Check status').action(core.status);
 cli.command('log', 'Show logs').action(core.log);

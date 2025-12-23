@@ -92,10 +92,12 @@ const stopSmartPilot = async () => {
   }
 };
 
-export const start = async () => {
+export const start = async (options: { smart?: boolean } = {}) => {
   try {
     await CoreManager.start();
-    await startSmartPilot();
+    if (options.smart) {
+      await startSmartPilot();
+    }
     await system.on();
   } catch (error: any) {
     console.error('Error starting core:', error.message);
