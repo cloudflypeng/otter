@@ -1,12 +1,16 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import chalk from 'chalk';
+import path from 'path';
 import { ClashAPI } from '../utils/api';
 
 const execAsync = promisify(exec);
 
 // Helper to detect active network service on macOS
 const getActiveService = async () => {
+  if (process.platform === 'win32') {
+    return 'Windows'; // Not needed on Windows
+  }
   try {
     // This is a heuristic. We look for the service associated with the default route interface.
     // 1. Get default route interface
@@ -41,6 +45,10 @@ const getActiveService = async () => {
 
 export const getSystemProxyStatus = async () => {
   try {
+    if (process.platform === 'win32') {
+      const { stdout } = await execAsync('powershell -Command "Get-ItemProperty -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\' | Select-Object ProxyEnable"');
+      return stdout.includes('1');
+    }
     const service = await getActiveService();
     const { stdout } = await execAsync(`networksetup -getwebproxy "${service}"`);
     return stdout.includes('Enabled: Yes');
@@ -52,7 +60,6 @@ export const getSystemProxyStatus = async () => {
 export const on = async (optionsOrSilent?: any) => {
   const silent = typeof optionsOrSilent === 'boolean' ? optionsOrSilent : false;
   try {
-    const service = await getActiveService();
     const ports = await ClashAPI.getProxyPort();
 
     if (ports.mixed === 0 && ports.http === 0 && ports.socks === 0) {
@@ -61,34 +68,64 @@ export const on = async (optionsOrSilent?: any) => {
     }
 
     const httpPort = ports.http || ports.mixed;
-    const socksPort = ports.socks || ports.mixed;
 
-    if (!silent) console.log(chalk.blue(`Enabling proxy for service: ${service}`));
+    if (process.platform === 'win32') {
+      // Windows: Use registry to set proxy
+      if (!silent) console.log(chalk.blue('Enabling system proxy...'));
+      
+      const proxyServer = `127.0.0.1:${httpPort}`;
+      
+      // Set registry values for IE/Edge and most applications
+      await execAsync(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d "${proxyServer}" /f`);
+      await execAsync(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`);
+      
+      // Notify Windows to refresh proxy settings
+      const scriptPath = path.resolve(__dirname, '../../scripts/refresh-proxy.ps1');
+      try {
+        await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+      } catch (e) {
+        // Ignore notification errors
+      }
+      
+      if (!silent) {
+        console.log(chalk.green(`✓ System proxy set to ${proxyServer}`));
+        console.log(chalk.yellow('  Restart your browser or other applications to use the proxy.'));
+        console.log(chalk.gray(`  You can verify in Windows Settings > Network & Internet > Proxy`));
+      }
+    } else {
+      // macOS: Use networksetup
+      const service = await getActiveService();
+      const socksPort = ports.socks || ports.mixed;
 
-    if (httpPort) {
-      await execAsync(`networksetup -setwebproxy "${service}" 127.0.0.1 ${httpPort}`);
-      await execAsync(`networksetup -setsecurewebproxy "${service}" 127.0.0.1 ${httpPort}`);
-      if (!silent) console.log(chalk.green(`HTTP/HTTPS Proxy set to 127.0.0.1:${httpPort}`));
-    }
+      if (!silent) console.log(chalk.blue(`Enabling proxy for service: ${service}`));
 
-    if (socksPort) {
-      await execAsync(`networksetup -setsocksfirewallproxy "${service}" 127.0.0.1 ${socksPort}`);
-      if (!silent) console.log(chalk.green(`SOCKS Proxy set to 127.0.0.1:${socksPort}`));
-    }
+      if (httpPort) {
+        await execAsync(`networksetup -setwebproxy "${service}" 127.0.0.1 ${httpPort}`);
+        await execAsync(`networksetup -setsecurewebproxy "${service}" 127.0.0.1 ${httpPort}`);
+        if (!silent) console.log(chalk.green(`HTTP/HTTPS Proxy set to 127.0.0.1:${httpPort}`));
+      }
 
-    // Turn them on
-    if (httpPort) {
-      await execAsync(`networksetup -setwebproxystate "${service}" on`);
-      await execAsync(`networksetup -setsecurewebproxystate "${service}" on`);
-    }
-    if (socksPort) {
-      await execAsync(`networksetup -setsocksfirewallproxystate "${service}" on`);
+      if (socksPort) {
+        await execAsync(`networksetup -setsocksfirewallproxy "${service}" 127.0.0.1 ${socksPort}`);
+        if (!silent) console.log(chalk.green(`SOCKS Proxy set to 127.0.0.1:${socksPort}`));
+      }
+
+      // Turn them on
+      if (httpPort) {
+        await execAsync(`networksetup -setwebproxystate "${service}" on`);
+        await execAsync(`networksetup -setsecurewebproxystate "${service}" on`);
+      }
+      if (socksPort) {
+        await execAsync(`networksetup -setsocksfirewallproxystate "${service}" on`);
+      }
     }
 
   } catch (error: any) {
     if (!silent) {
       console.error(chalk.red(`Error enabling system proxy: ${error.message}`));
-      console.error(chalk.yellow('Note: This command requires sudo privileges if not prompted.'));
+      if (process.platform !== 'win32') {
+        console.error(chalk.yellow('Note: This command requires sudo privileges if not prompted.'));
+      }
     }
   }
 };
@@ -96,14 +133,36 @@ export const on = async (optionsOrSilent?: any) => {
 export const off = async (optionsOrSilent?: any) => {
   const silent = typeof optionsOrSilent === 'boolean' ? optionsOrSilent : false;
   try {
-    const service = await getActiveService();
-    if (!silent) console.log(chalk.blue(`Disabling proxy for service: ${service}`));
+    if (process.platform === 'win32') {
+      // Windows: Disable proxy via registry
+      if (!silent) console.log(chalk.blue('Disabling system proxy...'));
+      
+      // Disable registry proxy
+      await execAsync(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f`);
+      
+      // Notify Windows to refresh proxy settings
+      const scriptPath = path.resolve(__dirname, '../../scripts/refresh-proxy.ps1');
+      try {
+        await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+      } catch (e) {
+        // Ignore notification errors
+      }
+      
+      if (!silent) {
+        console.log(chalk.green('✓ System proxy disabled.'));
+        console.log(chalk.yellow('  Restart your browser or other applications to fully disable the proxy.'));
+      }
+    } else {
+      // macOS: Use networksetup
+      const service = await getActiveService();
+      if (!silent) console.log(chalk.blue(`Disabling proxy for service: ${service}`));
 
-    await execAsync(`networksetup -setwebproxystate "${service}" off`);
-    await execAsync(`networksetup -setsecurewebproxystate "${service}" off`);
-    await execAsync(`networksetup -setsocksfirewallproxystate "${service}" off`);
+      await execAsync(`networksetup -setwebproxystate "${service}" off`);
+      await execAsync(`networksetup -setsecurewebproxystate "${service}" off`);
+      await execAsync(`networksetup -setsocksfirewallproxystate "${service}" off`);
 
-    if (!silent) console.log(chalk.green('System proxy disabled.'));
+      if (!silent) console.log(chalk.green('System proxy disabled.'));
+    }
   } catch (error: any) {
     if (!silent) console.error(chalk.red(`Error disabling system proxy: ${error.message}`));
   }
